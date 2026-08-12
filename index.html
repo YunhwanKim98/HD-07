@@ -87,7 +87,8 @@
 <script>
 const SUPABASE_URL="https://hcicdayrrebiijzmsjzb.supabase.co";
 const SUPABASE_KEY="sb_publishable_evArKRZ_DEhz9DX5qxYO2A_0at-4u3D";
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+const supabase = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}) : null;
+const hasSupabase = !!supabase;
 
 const boards={
 notice:{title:"공지사항",kicker:"NOTICE",desc:"프로젝트의 주요 소식을 웹진형 피드로 확인하세요."},
@@ -102,7 +103,7 @@ function toast(m){$("toast").textContent=m;$("toast").classList.add("show");setT
 function openModal(id){$(id).classList.add("open")} function closeModal(id){$(id).classList.remove("open")}
 function esc(s){return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))}
 function fmt(d){return d?new Date(d).toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"}):""}
-function go(type){if(type==="home")$("home").scrollIntoView({behavior:"smooth"});else{currentBoard=type;updateBoardHeader();loadBoard();$("boardArea").scrollIntoView({behavior:"smooth"})}}
+function go(type){if(type==="home"){$("home").scrollIntoView({behavior:"smooth"});return;}currentBoard=type;updateBoardHeader();if(hasSupabase){loadBoard();}else{$("boardPanel").innerHTML='<div class="empty">Supabase 연결이 필요합니다. 네트워크를 확인하세요.</div>';}$("boardArea").scrollIntoView({behavior:"smooth"})}
 function updateBoardHeader(){const c=boards[currentBoard];$("boardKicker").textContent=c.kicker;$("boardTitle").textContent=c.title;$("boardDesc").textContent=c.desc;document.querySelectorAll("[data-board]").forEach(b=>b.classList.toggle("active",b.dataset.board===currentBoard))}
 function setAuthMode(mode){
  $("signupTab").classList.toggle("active",mode==="signup");
@@ -115,6 +116,10 @@ function setAuthMode(mode){
 }
 function openAuth(){setAuthMode("signup");openModal("authModal")}
 async function submitAuth(){
+ if(!hasSupabase){
+   toast("현재 회원가입/로그인이 지원되지 않습니다.");
+   return;
+ }
  try{
    const mode=$("authSubmit").dataset.mode||"signup";
    const email=$("authEmail").value.trim();
@@ -265,7 +270,9 @@ for(var i=0;i<boardButtons.length;i++){
     go(this.dataset.board);
   });
 }
-supabase.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));
+if(hasSupabase && supabase.auth.onAuthStateChange){
+  supabase.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));
+}
 (async()=>{await refreshUser();updateBoardHeader();await loadBoard()})();
 </script>
 </body>
