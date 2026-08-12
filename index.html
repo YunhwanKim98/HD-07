@@ -22,9 +22,9 @@
 <header class="nav"><div class="navin">
 <div class="brand">PR <i>LAB</i></div>
 <nav class="navlinks">
-<button data-board="home" class="active">홈</button><button data-board="notice">공지사항</button><button data-board="free">자유게시판</button><button data-board="archive">자료실</button><button data-board="gallery">갤러리</button>
+<button data-board="home" class="active" type="button" onclick="go('home')">홈</button><button data-board="notice" type="button" onclick="go('notice')">공지사항</button><button data-board="free" type="button" onclick="go('free')">자유게시판</button><button data-board="archive" type="button" onclick="go('archive')">자료실</button><button data-board="gallery" type="button" onclick="go('gallery')">갤러리</button>
 </nav>
-<div class="account"><span id="userLabel">게스트</span><button type="button" id="authButton" class="primary">회원가입 / 로그인</button></div>
+<div class="account"><span id="userLabel">게스트</span><button type="button" id="authButton" class="primary" onclick="openAuth()">회원가입 / 로그인</button></div>
 </div></header>
 
 <main>
@@ -244,17 +244,27 @@ async function deletePost(id){
  const {error}=await supabase.from("posts").delete().eq("id",id);if(error)return toast(error.message);toast("삭제되었습니다.");loadBoard();loadStats();
 }
 
-$("authForm")?.addEventListener("submit",function(e){
-  e.preventDefault();
-  submitAuth();
-});
-$("authButton").addEventListener("click",function(e){
-  e.preventDefault();
-  if(currentUser) logout();
-  else openAuth();
-});
-
-document.querySelectorAll("[data-board]").forEach(b=>b.addEventListener("click",()=>go(b.dataset.board)));
+var authForm = $("authForm");
+if(authForm) {
+  authForm.addEventListener("submit",function(e){
+    e.preventDefault();
+    submitAuth();
+  });
+}
+var authButton = $("authButton");
+if(authButton) {
+  authButton.addEventListener("click",function(e){
+    e.preventDefault();
+    if(currentUser) logout();
+    else openAuth();
+  });
+}
+var boardButtons = document.querySelectorAll("[data-board]");
+for(var i=0;i<boardButtons.length;i++){
+  boardButtons[i].addEventListener("click",function(){
+    go(this.dataset.board);
+  });
+}
 supabase.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));
 (async()=>{await refreshUser();updateBoardHeader();await loadBoard()})();
 </script>
