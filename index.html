@@ -87,8 +87,8 @@
 <script>
 const SUPABASE_URL="https://hcicdayrrebiijzmsjzb.supabase.co";
 const SUPABASE_KEY="sb_publishable_evArKRZ_DEhz9DX5qxYO2A_0at-4u3D";
-const supabase = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}) : null;
-const hasSupabase = !!supabase;
+const supabaseClient = window.supabase?.createClient ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}}) : null;
+const hasSupabase = !!supabaseClient;
 
 const boards={
 notice:{title:"공지사항",kicker:"NOTICE",desc:"프로젝트의 주요 소식을 웹진형 피드로 확인하세요."},
@@ -136,7 +136,7 @@ async function submitAuth(){
    let r;
    if(mode==="signup"){
      const redirectTo=location.protocol==="file:" ? undefined : location.origin + location.pathname;
-     r=await supabase.auth.signUp({
+     r=await supabaseClient.auth.signUp({
        email,
        password,
        options:{
@@ -149,7 +149,7 @@ async function submitAuth(){
      toast(r.data?.session ? "회원가입 및 로그인 완료" : "가입 완료! 이메일 인증 링크를 확인해 주세요.");
      await refreshUser();
    }else{
-     r=await supabase.auth.signInWithPassword({email,password});
+     r=await supabaseClient.auth.signInWithPassword({email,password});
      if(r.error) throw r.error;
      closeModal("authModal");
      toast("로그인되었습니다.");
@@ -164,11 +164,11 @@ async function submitAuth(){
    $("authSubmit").textContent=mode==="signup"?"회원가입":"로그인";
  }
 }
-async function logout(){await supabase.auth.signOut();toast("로그아웃되었습니다.");await refreshUser()}
+async function logout(){await supabaseClient.auth.signOut();toast("로그아웃되었습니다.");await refreshUser()}
 async function refreshUser(){
- const {data}=await supabase.auth.getUser();currentUser=data.user||null;
+ const {data}=await supabaseClient.auth.getUser();currentUser=data.user||null;
  if(currentUser){
-   const {data:p}=await supabase.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();currentProfile=p;
+   const {data:p}=await supabaseClient.from("profiles").select("*").eq("id",currentUser.id).maybeSingle();currentProfile=p;
    $("userLabel").textContent=p?.display_name||currentUser.user_metadata?.display_name||currentUser.email;
    $("authButton").textContent="로그아웃";$("authButton").onclick=logout;
    $("adminBar").classList.toggle("hidden",p?.role!=="admin");
@@ -177,13 +177,13 @@ async function refreshUser(){
  loadStats();
 }
 async function loadStats(){
- const {count}=await supabase.from("posts").select("id",{count:"exact",head:true});$("statPosts").textContent=count??0;
- const {count:mc}=await supabase.from("profiles").select("id",{count:"exact",head:true});$("statMembers").textContent=mc??"-";
+ const {count}=await supabaseClient.from("posts").select("id",{count:"exact",head:true});$("statPosts").textContent=count??0;
+ const {count:mc}=await supabaseClient.from("profiles").select("id",{count:"exact",head:true});$("statMembers").textContent=mc??"-";
 }
 function canEdit(p){return currentUser && (p.user_id===currentUser.id || currentProfile?.role==="admin")}
 async function loadBoard(){
  updateBoardHeader();
- let q=supabase.from("posts").select("id,board_type,title,body,image_url,file_url,file_name,file_size,user_id,author_name,created_at,updated_at").eq("board_type",currentBoard).order("created_at",{ascending:false});
+ let q=supabaseClient.from("posts").select("id,board_type,title,body,image_url,file_url,file_name,file_size,user_id,author_name,created_at,updated_at").eq("board_type",currentBoard).order("created_at",{ascending:false});
  const {data,error}=await q;
  if(error){$("boardPanel").innerHTML='<div class="empty">DB 설정이 필요합니다. 아래 제공된 supabase.sql을 먼저 실행하세요.</div>';return}
  renderBoard(data||[]);
@@ -205,7 +205,7 @@ function actions(p){return canEdit(p)?`<div class="postActions"><button class="m
 function cardPost(p){return `<article class="post"><div><h3>${esc(p.title)}</h3><p>${esc(p.body||"")}</p><div class="meta">${esc(p.author_name||"")} · ${fmt(p.created_at)} ${p.file_url?`· <a href="${esc(p.file_url)}" target="_blank" rel="noopener">파일 ${esc(p.file_name||"열기")}</a>`:""}</div></div><div>${actions(p)}<button class="mini" onclick="detail('${p.id}')">보기</button></div></article>`}
 function cardGallery(p){return `<article class="tile">${p.image_url?`<img src="${esc(p.image_url)}" onerror="this.style.display='none'">`:""}<div class="cap"><h4>${esc(p.title)}</h4><p>${esc(p.body||"")}</p><div class="meta">${fmt(p.created_at)}</div><button class="mini" onclick="detail('${p.id}')">보기</button> ${actions(p)}</div></article>`}
 async function detail(id){
- const {data:p,error}=await supabase.from("posts").select("*").eq("id",id).single();if(error)return toast(error.message);
+ const {data:p,error}=await supabaseClient.from("posts").select("*").eq("id",id).single();if(error)return toast(error.message);
  $("detailContent").innerHTML=`<div class="kicker">${esc(p.board_type)}</div><h2>${esc(p.title)}</h2><div class="meta">${esc(p.author_name||"")} · ${fmt(p.created_at)}</div>${p.image_url?`<img src="${esc(p.image_url)}" style="width:100%;max-height:420px;object-fit:cover;border-radius:10px;margin:18px 0">`:""}<p style="white-space:pre-wrap;line-height:1.8;color:#53617a">${esc(p.body||"")}</p>${p.file_url?`<p><a class="btn primary" href="${esc(p.file_url)}" target="_blank" rel="noopener">첨부파일 열기</a></p>`:""}`;
  openModal("detailModal");
 }
@@ -217,7 +217,7 @@ function openPost(){
  openModal("postModal");
 }
 async function editPost(id){
- const {data:p,error}=await supabase.from("posts").select("*").eq("id",id).single();if(error)return toast(error.message);
+ const {data:p,error}=await supabaseClient.from("posts").select("*").eq("id",id).single();if(error)return toast(error.message);
  if(!canEdit(p))return toast("수정 권한이 없습니다.");
  editingId=id;$("postModalTitle").textContent="게시물 수정";$("postTitle").value=p.title;$("postBody").value=p.body||"";
  $("fileArea").innerHTML=currentBoard==="gallery"?`<input id="imageUrl" class="input" placeholder="이미지 URL" value="${esc(p.image_url||"")}"><div class="drop">새 이미지<input id="uploadFile" type="file" accept="image/*"></div>`:currentBoard==="archive"?`<div class="drop">새 자료 파일<input id="uploadFile" type="file"></div>`:"";
@@ -229,24 +229,24 @@ async function savePost(){
  const file=$("uploadFile")?.files?.[0];
  if(file){
    const path=`${currentUser.id}/${crypto.randomUUID()}-${file.name.replace(/[^\w.\-가-힣 ]/g,"_")}`;
-   const {error:up}=await supabase.storage.from("project-files").upload(path,file,{upsert:false});
+   const {error:up}=await supabaseClient.storage.from("project-files").upload(path,file,{upsert:false});
    if(up)return toast("파일 업로드 실패: "+up.message);
-   const {data:pub}=supabase.storage.from("project-files").getPublicUrl(path);
+   const {data:pub}=supabaseClient.storage.from("project-files").getPublicUrl(path);
    file_url=pub.publicUrl;file_name=file.name;file_size=file.size;
    if(currentBoard==="gallery")image_url=file_url;
  }
  let result;
  if(editingId){
-   result=await supabase.from("posts").update({title,body,image_url,file_url,file_name,file_size,updated_at:new Date().toISOString()}).eq("id",editingId);
+   result=await supabaseClient.from("posts").update({title,body,image_url,file_url,file_name,file_size,updated_at:new Date().toISOString()}).eq("id",editingId);
  }else{
-   result=await supabase.from("posts").insert({board_type:currentBoard,title,body,image_url,file_url,file_name,file_size,user_id:currentUser.id,author_name:currentProfile?.display_name||currentUser.user_metadata?.display_name||currentUser.email});
+   result=await supabaseClient.from("posts").insert({board_type:currentBoard,title,body,image_url,file_url,file_name,file_size,user_id:currentUser.id,author_name:currentProfile?.display_name||currentUser.user_metadata?.display_name||currentUser.email});
  }
  if(result.error)return toast(result.error.message);
  closeModal("postModal");toast(editingId?"수정되었습니다.":"등록되었습니다.");await loadBoard();loadStats();
 }
 async function deletePost(id){
  if(!confirm("이 게시물을 삭제할까요?"))return;
- const {error}=await supabase.from("posts").delete().eq("id",id);if(error)return toast(error.message);toast("삭제되었습니다.");loadBoard();loadStats();
+ const {error}=await supabaseClient.from("posts").delete().eq("id",id);if(error)return toast(error.message);toast("삭제되었습니다.");loadBoard();loadStats();
 }
 
 var authForm = $("authForm");
@@ -270,8 +270,8 @@ for(var i=0;i<boardButtons.length;i++){
     go(this.dataset.board);
   });
 }
-if(hasSupabase && supabase.auth.onAuthStateChange){
-  supabase.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));
+if(hasSupabase && supabaseClient.auth.onAuthStateChange){
+  supabaseClient.auth.onAuthStateChange(()=>setTimeout(refreshUser,0));
 }
 (async()=>{await refreshUser();updateBoardHeader();await loadBoard()})();
 </script>
